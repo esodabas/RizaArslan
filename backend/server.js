@@ -48,9 +48,18 @@ app.get('*', (req, res) => {
     });
 });
 
-// Hata yakalama
+// Hata yakalama (multer dahil)
 app.use((err, req, res, next) => {
     console.error('Sunucu hatası:', err.stack);
+
+    // Multer hataları
+    if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ error: 'Dosya boyutu çok büyük' });
+    }
+    if (err.message && err.message.includes('dosya formatı')) {
+        return res.status(400).json({ error: err.message });
+    }
+
     res.status(500).json({ error: 'Sunucu hatası', message: err.message });
 });
 
@@ -59,12 +68,12 @@ async function start() {
     try {
         await initDatabase();
         app.listen(PORT, () => {
-            console.log(`\n🚀 Sunucu çalışıyor: http://localhost:${PORT}`);
-            console.log(`📚 API: http://localhost:${PORT}/api/health`);
-            console.log(`🌍 ENV: ${process.env.NODE_ENV || 'development'}\n`);
+            console.log(`\nSunucu calisiyor: http://localhost:${PORT}`);
+            console.log(`API: http://localhost:${PORT}/api/health`);
+            console.log(`ENV: ${process.env.NODE_ENV || 'development'}\n`);
         });
     } catch (err) {
-        console.error('❌ Sunucu başlatılamadı:', err.message);
+        console.error('Sunucu baslatilamadi:', err.message);
         process.exit(1);
     }
 }

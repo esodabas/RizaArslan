@@ -49,8 +49,14 @@ export default function Home() {
                             <Link to="/makaleler" className="section-link">Tümünü Gör →</Link>
                         </div>
                         <div className="card-grid">
-                            {articles.map(article => (
-                                <Link to={`/makaleler/${article.id}`} key={article.id} style={{ textDecoration: 'none' }}>
+                            {articles.map(article => {
+                                const destination = article.file_path ? article.file_path : `/makaleler/${article.id}`;
+                                const isFile = !!article.file_path;
+                                const Wrapper = isFile ? 'a' : Link;
+                                const props = isFile ? { href: destination, target: '_blank', rel: 'noreferrer' } : { to: destination };
+                                
+                                return (
+                                <Wrapper {...props} key={article.id} style={{ textDecoration: 'none' }}>
                                     <div className="card">
                                         {article.cover_image ? (
                                             <img src={article.cover_image} alt={article.title} className="card-image" />
@@ -66,8 +72,8 @@ export default function Home() {
                                             </div>
                                         </div>
                                     </div>
-                                </Link>
-                            ))}
+                                </Wrapper>
+                            )})}
                         </div>
                     </section>
                 )}
@@ -80,8 +86,14 @@ export default function Home() {
                             <Link to="/bireysel-gorusler" className="section-link">Tümünü Gör →</Link>
                         </div>
                         <div className="card-grid">
-                            {columns.map(col => (
-                                <Link to={`/bireysel-gorusler/${col.id}`} key={col.id} style={{ textDecoration: 'none' }}>
+                            {columns.map(col => {
+                                const destination = col.file_path ? col.file_path : `/bireysel-gorusler/${col.id}`;
+                                const isFile = !!col.file_path;
+                                const Wrapper = isFile ? 'a' : Link;
+                                const props = isFile ? { href: destination, target: '_blank', rel: 'noreferrer' } : { to: destination };
+
+                                return (
+                                <Wrapper {...props} key={col.id} style={{ textDecoration: 'none' }}>
                                     <div className="card">
                                         <div className="card-body">
                                             <span className="card-tag">Bireysel Görüş</span>
@@ -92,8 +104,8 @@ export default function Home() {
                                             </div>
                                         </div>
                                     </div>
-                                </Link>
-                            ))}
+                                </Wrapper>
+                            )})}
                         </div>
                     </section>
                 )}
@@ -108,10 +120,20 @@ export default function Home() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                             {books.map(book => (
                                 <div className="book-card" key={book.id}>
-                                    {book.cover_image ? (
-                                        <img src={book.cover_image} alt={book.title} className="book-cover" />
+                                    {book.file_path ? (
+                                        <a href={book.file_path} target="_blank" rel="noreferrer" style={{ display: 'block' }}>
+                                            {book.cover_image ? (
+                                                <img src={book.cover_image} alt={book.title} className="book-cover" />
+                                            ) : (
+                                                <div className="book-cover-placeholder"></div>
+                                            )}
+                                        </a>
                                     ) : (
-                                        <div className="book-cover-placeholder"></div>
+                                        book.cover_image ? (
+                                            <img src={book.cover_image} alt={book.title} className="book-cover" />
+                                        ) : (
+                                            <div className="book-cover-placeholder"></div>
+                                        )
                                     )}
                                     <div className="book-info">
                                         <h3>{book.title}</h3>

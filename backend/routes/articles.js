@@ -10,9 +10,9 @@ router.get('/', async (req, res) => {
         let articles;
 
         if (status === 'all') {
-            articles = await queryAll('SELECT id, title, summary, cover_image, status, created_at, updated_at FROM articles ORDER BY created_at DESC');
+            articles = await queryAll('SELECT id, title, summary, cover_image, file_path, status, created_at, updated_at FROM articles ORDER BY created_at DESC');
         } else {
-            articles = await queryAll("SELECT id, title, summary, cover_image, status, created_at, updated_at FROM articles WHERE status = 'published' ORDER BY created_at DESC");
+            articles = await queryAll("SELECT id, title, summary, cover_image, file_path, status, created_at, updated_at FROM articles WHERE status = 'published' ORDER BY created_at DESC");
         }
 
         res.json(articles);
@@ -37,10 +37,10 @@ router.get('/:id', async (req, res) => {
 // POST /api/articles
 router.post('/', authMiddleware, async (req, res) => {
     try {
-        const { title, content, summary, cover_image, status } = req.body;
+        const { title, content, summary, cover_image, file_path, status } = req.body;
         const result = await runSql(
-            'INSERT INTO articles (title, content, summary, cover_image, status) VALUES (?, ?, ?, ?, ?)',
-            [title || '', content || '', summary || '', cover_image || '', status || 'draft']
+            'INSERT INTO articles (title, content, summary, cover_image, file_path, status) VALUES (?, ?, ?, ?, ?, ?)',
+            [title || '', content || '', summary || '', cover_image || '', file_path || '', status || 'draft']
         );
         console.log('INSERT result:', JSON.stringify(result));
         const article = await queryGet('SELECT * FROM articles WHERE id = ?', [result.lastInsertRowid]);
@@ -55,17 +55,18 @@ router.post('/', authMiddleware, async (req, res) => {
 // PUT /api/articles/:id
 router.put('/:id', authMiddleware, async (req, res) => {
     try {
-        const { title, content, summary, cover_image, status } = req.body;
+        const { title, content, summary, cover_image, file_path, status } = req.body;
         const existing = await queryGet('SELECT * FROM articles WHERE id = ?', [req.params.id]);
         if (!existing) return res.status(404).json({ error: 'Makale bulunamadı' });
 
         await runSql(
-            'UPDATE articles SET title = ?, content = ?, summary = ?, cover_image = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+            'UPDATE articles SET title = ?, content = ?, summary = ?, cover_image = ?, file_path = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
             [
                 title !== undefined ? title : existing.title,
                 content !== undefined ? content : existing.content,
                 summary !== undefined ? summary : existing.summary,
                 cover_image !== undefined ? cover_image : existing.cover_image,
+                file_path !== undefined ? file_path : existing.file_path,
                 status !== undefined ? status : existing.status,
                 req.params.id
             ]

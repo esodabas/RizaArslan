@@ -31,22 +31,51 @@ export default function Books() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                         {books.map(book => (
                             <div className="book-card" key={book.id}>
-                                {book.cover_image ? (
-                                    <img src={book.cover_image} alt={book.title} className="book-cover" />
+                                {/* Kapak Görseli - file_path varsa tıklanınca dosya açılır */}
+                                {book.file_path ? (
+                                    <a href={book.file_path} target="_blank" rel="noopener noreferrer" style={{ display: 'block', flexShrink: 0 }}>
+                                        {book.cover_image ? (
+                                            <img src={book.cover_image} alt={book.title} className="book-cover" style={{ cursor: 'pointer' }} />
+                                        ) : (
+                                            <div className="book-cover-placeholder" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.5rem' }}></div>
+                                        )}
+                                    </a>
                                 ) : (
-                                    <div className="book-cover-placeholder"></div>
+                                    book.cover_image ? (
+                                        <img src={book.cover_image} alt={book.title} className="book-cover" />
+                                    ) : (
+                                        <div className="book-cover-placeholder"></div>
+                                    )
                                 )}
+
                                 <div className="book-info">
-                                    <h3>{book.title}</h3>
+                                    <h3>
+                                        {book.file_path ? (
+                                            <a href={book.file_path} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>
+                                                {book.title}
+                                            </a>
+                                        ) : book.title}
+                                    </h3>
                                     {book.publisher && <p className="book-detail">Yayınevi: {book.publisher}</p>}
                                     {book.year && <p className="book-detail">Basım Yılı: {book.year}</p>}
                                     {book.isbn && <p className="book-detail">ISBN: {book.isbn}</p>}
-                                    {book.description && <p style={{ marginTop: '10px', color: 'var(--color-text-secondary)', fontSize: '0.95rem', lineHeight: '1.7' }}>{book.description}</p>}
-                                    {book.buy_link && (
-                                        <a href={book.buy_link} target="_blank" rel="noopener noreferrer" className="book-link">
-                                            Satın Al →
-                                        </a>
+                                    {book.description && (
+                                        <p style={{ marginTop: '10px', color: 'var(--color-text-secondary)', fontSize: '0.95rem', lineHeight: '1.7' }}>
+                                            {book.description}
+                                        </p>
                                     )}
+                                    <div style={{ display: 'flex', gap: '12px', marginTop: '14px', flexWrap: 'wrap' }}>
+                                        {book.file_path && (
+                                            <a href={book.file_path} target="_blank" rel="noopener noreferrer" className="book-link">
+                                                Kitabı Oku / İndir
+                                            </a>
+                                        )}
+                                        {book.buy_link && (
+                                            <a href={book.buy_link} target="_blank" rel="noopener noreferrer" className="book-link">
+                                                Satın Al
+                                            </a>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         ))}

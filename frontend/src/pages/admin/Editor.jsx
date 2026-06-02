@@ -13,6 +13,7 @@ export default function Editor({ type }) {
     const [content, setContent] = useState('');
     const [summary, setSummary] = useState('');
     const [coverImage, setCoverImage] = useState('');
+    const [filePath, setFilePath] = useState('');
     const [status, setStatus] = useState('draft');
     const [saveStatus, setSaveStatus] = useState('');
     const [itemId, setItemId] = useState(id || null);
@@ -20,13 +21,14 @@ export default function Editor({ type }) {
     const [fileUploading, setFileUploading] = useState(false);
 
     const saveTimerRef = useRef(null);
-    const token = localStorage.getItem('token');
+    const getToken = () => localStorage.getItem('token');
     const apiPath = type === 'article' ? 'articles' : 'columns';
     const typeName = type === 'article' ? 'Makale' : 'Bireysel Görüş';
     const [mediaItems, setMediaItems] = useState([]);
     const [uploadingMedia, setUploadingMedia] = useState(false);
 
     useEffect(() => {
+        const token = getToken();
         if (!token) {
             navigate('/admin/login');
             return;
@@ -40,14 +42,24 @@ export default function Editor({ type }) {
                 setContent(res.data.content || '');
                 setSummary(res.data.summary || '');
                 setCoverImage(res.data.cover_image || '');
+                setFilePath(res.data.file_path || '');
                 setStatus(res.data.status || 'draft');
                 try { setMediaItems(res.data.media ? JSON.parse(res.data.media) : []); } catch (e) { setMediaItems([]); }
-            }).catch(() => navigate('/admin'));
+            }).catch(err => {
+                if (err.response?.status === 401) {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('username');
+                    navigate('/admin/login');
+                } else {
+                    navigate('/admin');
+                }
+            });
         }
-    }, [id, isEdit, apiPath, token, navigate]);
+    }, [id, isEdit, apiPath, navigate]);
 
     const saveData = useCallback(async (data) => {
-        if (!token) return;
+        const token = getToken();
+        if (!token) { navigate('/admin/login'); return; }
         setSaveStatus('saving');
 
         try {
@@ -65,10 +77,16 @@ export default function Editor({ type }) {
             setSaveStatus('saved');
             setTimeout(() => setSaveStatus(''), 3000);
         } catch (err) {
+            if (err.response?.status === 401) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('username');
+                navigate('/admin/login');
+                return;
+            }
             setSaveStatus('error');
             setTimeout(() => setSaveStatus(''), 5000);
         }
-    }, [itemId, apiPath, token]);
+    }, [itemId, apiPath, navigate]);
 
     // Auto-save with debounce (3 seconds)
     const triggerAutoSave = useCallback((newTitle, newContent, newSummary, newCoverImage) => {
@@ -80,12 +98,13 @@ export default function Editor({ type }) {
                 content: newContent,
                 summary: newSummary,
                 cover_image: newCoverImage,
+                file_path: filePath,
                 status: 'draft'
             };
             if (type === 'column') data.media = JSON.stringify(mediaItems);
             saveData(data);
         }, 3000);
-    }, [saveData]);
+    }, [saveData, mediaItems, filePath, type]);
 
     const handleTitleChange = (val) => {
         setTitle(val);
@@ -104,7 +123,7 @@ export default function Editor({ type }) {
 
     const handlePublish = async () => {
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-        const data = { title, content, summary, cover_image: coverImage, status: 'published' };
+        const data = { title, content, summary, cover_image: coverImage, file_path: filePath, status: 'published' };
         if (type === 'column') data.media = JSON.stringify(mediaItems);
         await saveData(data);
         setStatus('published');
@@ -112,7 +131,7 @@ export default function Editor({ type }) {
 
     const handleUnpublish = async () => {
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-        const data = { title, content, summary, cover_image: coverImage, status: 'draft' };
+        const data = { title, content, summary, cover_image: coverImage, file_path: filePath, status: 'draft' };
         if (type === 'column') data.media = JSON.stringify(mediaItems);
         await saveData(data);
         setStatus('draft');
@@ -120,7 +139,7 @@ export default function Editor({ type }) {
 
     const handleSaveNow = async () => {
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-        const data = { title, content, summary, cover_image: coverImage, status };
+        const data = { title, content, summary, cover_image: coverImage, file_path: filePath, status };
         if (type === 'column') data.media = JSON.stringify(mediaItems);
         await saveData(data);
     };
@@ -136,10 +155,7 @@ export default function Editor({ type }) {
                 formData.append('image', file);
 
                 const res = await axios.post('/api/upload', formData, {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'multipart/form-data'
-                    }
+                    headers: { Authorization: `Bearer ${getToken()}` }
                 });
 
                 const isVideo = file.type.startsWith('video/');
@@ -150,7 +166,8 @@ export default function Editor({ type }) {
                 }]);
             }
         } catch (err) {
-            alert('Medya yükleme hatası');
+            const msg = err.response?.data?.error || err.message || 'Bilinmeyen hata';
+            alert(`Medya yükleme hatası (${err.response?.status || '?'}): ${msg}`);
         } finally {
             setUploadingMedia(false);
             e.target.value = '';
@@ -175,15 +192,13 @@ export default function Editor({ type }) {
 
         try {
             const res = await axios.post('/api/upload', formData, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'multipart/form-data'
-                }
+                headers: { Authorization: `Bearer ${getToken()}` }
             });
             setCoverImage(res.data.url);
             triggerAutoSave(title, content, summary, res.data.url);
         } catch (err) {
-            alert('Görsel yükleme hatası');
+            const msg = err.response?.data?.error || err.message || 'Bilinmeyen hata';
+            alert(`Görsel yükleme hatası (${err.response?.status || '?'}): ${msg}`);
         } finally {
             setUploading(false);
         }
@@ -233,20 +248,15 @@ export default function Editor({ type }) {
 
         try {
             const res = await axios.post('/api/upload', formData, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'multipart/form-data'
-                }
+                headers: { Authorization: `Bearer ${getToken()}` }
             });
 
-            const fileExt = file.name.split('.').pop().toLowerCase();
-            const icon = ['pdf'].includes(fileExt) ? '📄' : '📎';
-            const downloadLink = `<p><a href="${res.data.url}" target="_blank">${icon} ${file.name}</a></p>`;
-            const newContent = content + downloadLink;
-            setContent(newContent);
-            triggerAutoSave(title, newContent, summary, coverImage);
+            setFilePath(res.data.url);
+            triggerAutoSave(title, content, summary, coverImage);
+            alert('Dosya başarıyla yüklendi.');
         } catch (err) {
-            alert('Dosya yükleme hatası');
+            const msg = err.response?.data?.error || err.message || 'Bilinmeyen hata';
+            alert(`Dosya yükleme hatası (${err.response?.status || '?'}): ${msg}`);
         } finally {
             setFileUploading(false);
             e.target.value = '';
@@ -438,7 +448,7 @@ export default function Editor({ type }) {
                                     Dosya Ekle (PDF, DOCX vb.)
                                 </p>
                                 <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '10px' }}>
-                                    Dosya sunucuya yüklenir ve içeriğe indirme linki eklenir
+                                    Dosya sunucuya yüklenir ve içerik olarak atanır
                                 </p>
                                 <input
                                     type="file"
@@ -447,6 +457,11 @@ export default function Editor({ type }) {
                                     style={{ fontSize: '0.85rem' }}
                                 />
                                 {fileUploading && <span style={{ color: 'var(--color-warning)', fontSize: '0.85rem', marginLeft: '8px' }}>Yükleniyor...</span>}
+                                {filePath && (
+                                    <p style={{ marginTop: '10px', fontSize: '0.85rem' }}>
+                                        <a href={filePath} target="_blank" rel="noreferrer">Yüklü Dosyayı Görüntüle</a>
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </div>

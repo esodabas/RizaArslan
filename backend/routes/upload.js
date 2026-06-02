@@ -48,25 +48,35 @@ const upload = multer({
 });
 
 // POST /api/upload
-router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
-    try {
-        if (!req.file) {
-            return res.status(400).json({ error: 'Dosya yüklenmedi' });
+router.post('/', authMiddleware, (req, res) => {
+    upload.single('image')(req, res, async (multerErr) => {
+        try {
+            if (multerErr) {
+                console.error('Multer hatası:', multerErr.message);
+                if (multerErr.code === 'LIMIT_FILE_SIZE') {
+                    return res.status(400).json({ error: 'Dosya boyutu çok büyük (max 50MB)' });
+                }
+                return res.status(400).json({ error: multerErr.message || 'Dosya yükleme hatası' });
+            }
+
+            if (!req.file) {
+                return res.status(400).json({ error: 'Dosya yüklenmedi' });
+            }
+
+            const imageUrl = `/uploads/${req.file.filename}`;
+
+            if (req.body.gallery === 'true') {
+                const maxOrder = await queryGet('SELECT MAX(sort_order) as max_order FROM gallery');
+                const sortOrder = (maxOrder?.max_order || 0) + 1;
+                await runSql('INSERT INTO gallery (image_path, caption, sort_order) VALUES (?, ?, ?)', [imageUrl, req.body.caption || '', sortOrder]);
+            }
+
+            res.json({ url: imageUrl, filename: req.file.filename });
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ error: 'Dosya yükleme hatası' });
         }
-
-        const imageUrl = `/uploads/${req.file.filename}`;
-
-        if (req.body.gallery === 'true') {
-            const maxOrder = await queryGet('SELECT MAX(sort_order) as max_order FROM gallery');
-            const sortOrder = (maxOrder?.max_order || 0) + 1;
-            await runSql('INSERT INTO gallery (image_path, caption, sort_order) VALUES (?, ?, ?)', [imageUrl, req.body.caption || '', sortOrder]);
-        }
-
-        res.json({ url: imageUrl, filename: req.file.filename });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Dosya yükleme hatası' });
-    }
+    });
 });
 
 // GET /api/upload/gallery

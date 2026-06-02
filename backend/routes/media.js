@@ -54,31 +54,41 @@ router.get('/', async (req, res) => {
 });
 
 // POST /api/media - upload new media
-router.post('/', authMiddleware, upload.single('file'), async (req, res) => {
-    try {
-        if (!req.file) {
-            return res.status(400).json({ error: 'Dosya yüklenmedi' });
+router.post('/', authMiddleware, (req, res) => {
+    upload.single('file')(req, res, async (multerErr) => {
+        try {
+            if (multerErr) {
+                console.error('Multer hatası:', multerErr.message);
+                if (multerErr.code === 'LIMIT_FILE_SIZE') {
+                    return res.status(400).json({ error: 'Dosya boyutu çok büyük (max 50MB)' });
+                }
+                return res.status(400).json({ error: multerErr.message || 'Dosya yükleme hatası' });
+            }
+
+            if (!req.file) {
+                return res.status(400).json({ error: 'Dosya yüklenmedi' });
+            }
+
+            const fileUrl = `/uploads/${req.file.filename}`;
+            const isVideo = req.file.mimetype.startsWith('video/');
+            const mediaType = isVideo ? 'video' : 'image';
+            const caption = req.body.caption || '';
+
+            const maxOrder = await queryGet('SELECT MAX(sort_order) as max_order FROM media_table');
+            const sortOrder = (maxOrder?.max_order || 0) + 1;
+
+            const result = await runSql(
+                'INSERT INTO media_table (file_path, media_type, caption, sort_order) VALUES (?, ?, ?, ?)',
+                [fileUrl, mediaType, caption, sortOrder]
+            );
+
+            const media = await queryGet('SELECT * FROM media_table WHERE id = ?', [result.lastInsertRowid]);
+            res.status(201).json(media);
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ error: 'Medya yükleme hatası' });
         }
-
-        const fileUrl = `/uploads/${req.file.filename}`;
-        const isVideo = req.file.mimetype.startsWith('video/');
-        const mediaType = isVideo ? 'video' : 'image';
-        const caption = req.body.caption || '';
-
-        const maxOrder = await queryGet('SELECT MAX(sort_order) as max_order FROM media_table');
-        const sortOrder = (maxOrder?.max_order || 0) + 1;
-
-        const result = await runSql(
-            'INSERT INTO media_table (file_path, media_type, caption, sort_order) VALUES (?, ?, ?, ?)',
-            [fileUrl, mediaType, caption, sortOrder]
-        );
-
-        const media = await queryGet('SELECT * FROM media_table WHERE id = ?', [result.lastInsertRowid]);
-        res.status(201).json(media);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Medya yükleme hatası' });
-    }
+    });
 });
 
 // PUT /api/media/:id - update caption

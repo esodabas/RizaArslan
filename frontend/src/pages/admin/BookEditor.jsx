@@ -11,6 +11,7 @@ export default function BookEditor() {
         title: '',
         description: '',
         cover_image: '',
+        file_path: '',
         publisher: '',
         year: '',
         isbn: '',
@@ -19,9 +20,10 @@ export default function BookEditor() {
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [fileUploading, setFileUploading] = useState(false);
-    const token = localStorage.getItem('token');
+    const getToken = () => localStorage.getItem('token');
 
     useEffect(() => {
+        const token = getToken();
         if (!token) { navigate('/admin/login'); return; }
 
         if (isEdit && id) {
@@ -32,14 +34,23 @@ export default function BookEditor() {
                     title: res.data.title || '',
                     description: res.data.description || '',
                     cover_image: res.data.cover_image || '',
+                    file_path: res.data.file_path || '',
                     publisher: res.data.publisher || '',
                     year: res.data.year || '',
                     isbn: res.data.isbn || '',
                     buy_link: res.data.buy_link || ''
                 });
-            }).catch(() => navigate('/admin'));
+            }).catch(err => {
+                if (err.response?.status === 401) {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('username');
+                    navigate('/admin/login');
+                } else {
+                    navigate('/admin');
+                }
+            });
         }
-    }, [id, isEdit, token, navigate]);
+    }, [id, isEdit, navigate]);
 
     const handleChange = (field, value) => {
         setForm(prev => ({ ...prev, [field]: value }));
@@ -55,11 +66,13 @@ export default function BookEditor() {
 
         try {
             const res = await axios.post('/api/upload', formData, {
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
+                headers: { Authorization: `Bearer ${getToken()}` }
             });
             handleChange('cover_image', res.data.url);
-        } catch {
-            alert('Görsel yükleme hatası');
+        } catch (err) {
+            const msg = err.response?.data?.error || err.message || 'Bilinmeyen hata';
+            const status = err.response?.status || '?';
+            alert(`Görsel yükleme hatası (${status}): ${msg}`);
         } finally {
             setUploading(false);
         }
@@ -105,19 +118,15 @@ export default function BookEditor() {
 
         try {
             const res = await axios.post('/api/upload', formData, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'multipart/form-data'
-                }
+                headers: { Authorization: `Bearer ${getToken()}` }
             });
 
-            const fileExt = file.name.split('.').pop().toLowerCase();
-            const icon = ['pdf'].includes(fileExt) ? '📄' : '📎';
-            const downloadLink = `<p><a href="${res.data.url}" target="_blank">${icon} ${file.name}</a></p>`;
-            const newDesc = form.description + downloadLink;
-            handleChange('description', newDesc);
+            handleChange('file_path', res.data.url);
+            alert('Dosya başarıyla yüklendi.');
         } catch (err) {
-            alert('Dosya yükleme hatası');
+            const msg = err.response?.data?.error || err.message || 'Bilinmeyen hata';
+            const status = err.response?.status || '?';
+            alert(`Dosya yükleme hatası (${status}): ${msg}`);
         } finally {
             setFileUploading(false);
             e.target.value = '';
@@ -126,7 +135,7 @@ export default function BookEditor() {
 
     const handleSave = async () => {
         setSaving(true);
-        const headers = { Authorization: `Bearer ${token}` };
+        const headers = { Authorization: `Bearer ${getToken()}` };
         const data = { ...form, year: form.year ? parseInt(form.year) : null };
 
         try {
@@ -136,7 +145,13 @@ export default function BookEditor() {
                 await axios.post('/api/books', data, { headers });
             }
             navigate('/admin');
-        } catch {
+        } catch (err) {
+            if (err.response?.status === 401) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('username');
+                navigate('/admin/login');
+                return;
+            }
             alert('Kayıt hatası');
         } finally {
             setSaving(false);
@@ -180,7 +195,7 @@ export default function BookEditor() {
                         <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
                             <div style={{ flex: 1, minWidth: '200px' }}>
                                 <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginBottom: '8px', fontWeight: '600' }}>
-                                    📄 Metin Dosyası İçe Aktar
+                                    Metin Dosyası İçe Aktar
                                 </p>
                                 <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '10px' }}>
                                     .txt, .html, .md dosyalarının içeriği açıklamaya aktarılır
@@ -189,13 +204,18 @@ export default function BookEditor() {
                             </div>
                             <div style={{ flex: 1, minWidth: '200px' }}>
                                 <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginBottom: '8px', fontWeight: '600' }}>
-                                    📎 Dosya Ekle (PDF, DOCX vb.)
+                                    Dosya Ekle (PDF, DOCX vb.)
                                 </p>
                                 <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '10px' }}>
-                                    Dosya sunucuya yüklenir ve açıklamaya indirme linki eklenir
+                                    Dosya sunucuya yüklenir ve direkt dosya içeriği olarak atanır
                                 </p>
                                 <input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar" onChange={handleDocumentUpload} style={{ fontSize: '0.85rem' }} />
                                 {fileUploading && <span style={{ color: 'var(--color-warning)', fontSize: '0.85rem', marginLeft: '8px' }}>Yükleniyor...</span>}
+                                {form.file_path && (
+                                    <p style={{ marginTop: '10px', fontSize: '0.85rem' }}>
+                                        <a href={form.file_path} target="_blank" rel="noreferrer">Yüklü Dosyayı Görüntüle</a>
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </div>

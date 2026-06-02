@@ -29,7 +29,7 @@ export default function Login() {
     return (
         <div className="login-page">
             <div className="login-card">
-                <h1>🔐 Admin Giriş</h1>
+                <h1>Admin Giriş</h1>
                 <p>Yönetim paneline erişmek için giriş yapın</p>
 
                 {error && <div className="login-error">{error}</div>}

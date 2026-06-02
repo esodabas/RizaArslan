@@ -62,17 +62,7 @@ export default function Contact() {
                         )}
                     </div>
 
-                    <div className="contact-info-card">
-                        <h3>Bilgilendirme</h3>
-                        <p style={{ color: 'var(--color-text-secondary)', lineHeight: '1.8', fontSize: '0.95rem' }}>
-                            İletişim bilgileri üzerinden bana ulaşabilirsiniz. E-posta yoluyla iletişime geçmeniz
-                            en hızlı yanıt almanızı sağlayacaktır.
-                        </p>
-                        <p style={{ color: 'var(--color-text-secondary)', lineHeight: '1.8', fontSize: '0.95rem', marginTop: '16px' }}>
-                            Akademik iş birliği, konferans davetleri ve diğer konular için lütfen
-                            e-posta adresimi kullanınız.
-                        </p>
-                    </div>
+
                 </div>
             </div>
         </div>

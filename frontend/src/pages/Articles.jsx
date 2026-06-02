@@ -35,25 +35,34 @@ export default function Articles() {
                     </div>
                 ) : (
                     <div className="card-grid">
-                        {articles.map(article => (
-                            <Link to={`/makaleler/${article.id}`} key={article.id} style={{ textDecoration: 'none' }}>
-                                <div className="card">
-                                    {article.cover_image ? (
-                                        <img src={article.cover_image} alt={article.title} className="card-image" />
-                                    ) : (
-                                        <div className="card-image-placeholder"></div>
-                                    )}
-                                    <div className="card-body">
-                                        <span className="card-tag">Makale</span>
-                                        <h3 className="card-title">{article.title}</h3>
-                                        {article.summary && <p className="card-summary">{article.summary}</p>}
-                                        <div className="card-meta">
-                                            <span>{formatDate(article.created_at)}</span>
+                        {articles.map(article => {
+                            const hasFile = !!article.file_path;
+                            const Wrapper = hasFile ? 'a' : Link;
+                            const wrapperProps = hasFile
+                                ? { href: article.file_path, target: '_blank', rel: 'noreferrer', style: { textDecoration: 'none' } }
+                                : { to: `/makaleler/${article.id}`, style: { textDecoration: 'none' } };
+
+                            return (
+                                <Wrapper {...wrapperProps} key={article.id}>
+                                    <div className="card">
+                                        {article.cover_image ? (
+                                            <img src={article.cover_image} alt={article.title} className="card-image" />
+                                        ) : (
+                                            <div className="card-image-placeholder"></div>
+                                        )}
+                                        <div className="card-body">
+                                            <span className="card-tag">Makale</span>
+                                            <h3 className="card-title">{article.title}</h3>
+                                            {article.summary && <p className="card-summary">{article.summary}</p>}
+                                            <div className="card-meta">
+                                                <span>{formatDate(article.created_at)}</span>
+                                                {hasFile && <span style={{ color: 'var(--color-accent)', fontSize: '0.78rem', fontWeight: '600' }}>PDF / Dosya</span>}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </Link>
-                        ))}
+                                </Wrapper>
+                            );
+                        })}
                     </div>
                 )}
             </div>

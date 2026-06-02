@@ -9,9 +9,10 @@ export default function Dashboard() {
     const [activeTab, setActiveTab] = useState('articles');
     const navigate = useNavigate();
 
-    const token = localStorage.getItem('token');
+    const getToken = () => localStorage.getItem('token');
 
     useEffect(() => {
+        const token = getToken();
         if (!token) {
             navigate('/admin/login');
             return;
@@ -19,13 +20,36 @@ export default function Dashboard() {
 
         const headers = { Authorization: `Bearer ${token}` };
 
-        axios.get('/api/articles?status=all', { headers }).then(res => setArticles(res.data)).catch(() => { });
-        axios.get('/api/columns?status=all', { headers }).then(res => setColumns(res.data)).catch(() => { });
-        axios.get('/api/books', { headers }).then(res => setBooks(res.data)).catch(() => { });
-    }, [token, navigate]);
+        const handleErr = (err) => {
+            if (err.response?.status === 401) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('username');
+                navigate('/admin/login');
+            }
+        };
 
-    const handleDelete = async (type, id) => {
-        if (!window.confirm('Bu öğeyi silmek istediğinize emin misiniz?')) return;
+        axios.get('/api/articles?status=all', { headers }).then(res => setArticles(res.data)).catch(handleErr);
+        axios.get('/api/columns?status=all', { headers }).then(res => setColumns(res.data)).catch(handleErr);
+        axios.get('/api/books', { headers }).then(res => setBooks(res.data)).catch(handleErr);
+    }, [navigate]);
+
+    // Custom confirm dialog state
+    const [confirmDelete, setConfirmDelete] = useState(null);
+
+    const handleDelete = (type, id) => {
+        setConfirmDelete({ type, id });
+    };
+
+    const executeDelete = async () => {
+        if (!confirmDelete) return;
+        const { type, id } = confirmDelete;
+        setConfirmDelete(null);
+
+        const token = getToken();
+        if (!token) {
+            navigate('/admin/login');
+            return;
+        }
 
         const headers = { Authorization: `Bearer ${token}` };
         try {
@@ -34,7 +58,16 @@ export default function Dashboard() {
             if (type === 'columns') setColumns(prev => prev.filter(c => c.id !== id));
             if (type === 'books') setBooks(prev => prev.filter(b => b.id !== id));
         } catch (err) {
-            alert('Silme hatası oluştu');
+            if (err.response?.status === 401) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('username');
+                navigate('/admin/login');
+                return;
+            }
+            console.error('Delete error:', err);
+            const msg = err.response?.data?.error || err.message || 'Bilinmeyen hata';
+            const status = err.response?.status || '?';
+            alert(`Silme hatası (${status}): ${msg}`);
         }
     };
 
@@ -71,19 +104,15 @@ export default function Dashboard() {
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                     <Link to="/admin/about" className="btn btn-sm btn-secondary">Hakkımda</Link>
                     <Link to="/admin/media" className="btn btn-sm btn-secondary">Medya</Link>
+                    <Link to="/admin/settings" className="btn btn-sm btn-secondary" style={{ background: 'var(--color-bg-elevated)' }}>⚙️ Ayarlar</Link>
                     <button onClick={handleLogout} className="btn btn-sm btn-danger">Çıkış</button>
                 </div>
             </div>
 
             <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '30px 24px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                    <div>
-                        <h2 style={{ marginBottom: '8px' }}>İçerik Yönetimi</h2>
-                        <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>Makalelerinizi, görüşlerinizi ve kitaplarınızı buradan yönetebilirsiniz.</p>
-                    </div>
-                    <Link to="/admin/media" className="btn btn-primary" style={{ padding: '12px 24px', fontSize: '1rem', background: 'var(--color-accent)' }}>
-                        Medya ve Video Ekle
-                    </Link>
+                <div style={{ marginBottom: '24px' }}>
+                    <h2 style={{ marginBottom: '8px' }}>İçerik Yönetimi</h2>
+                    <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>Makalelerinizi, görüşlerinizi ve kitaplarınızı buradan yönetebilirsiniz.</p>
                 </div>
 
                 {/* Tabs */}
@@ -236,6 +265,47 @@ export default function Dashboard() {
                     </div>
                 )}
             </div>
+
+            {/* Custom Confirm Dialog */}
+            {confirmDelete && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.5)', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center', zIndex: 9999
+                }}>
+                    <div style={{
+                        background: 'var(--color-bg-card, #fff)',
+                        borderRadius: '12px',
+                        padding: '32px',
+                        maxWidth: '400px',
+                        width: '90%',
+                        boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+                        textAlign: 'center'
+                    }}>
+
+                        <h3 style={{ marginBottom: '8px', color: 'var(--color-text)' }}>Silmek istediğinize emin misiniz?</h3>
+                        <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', marginBottom: '24px' }}>
+                            Bu işlem geri alınamaz.
+                        </p>
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                            <button
+                                onClick={() => setConfirmDelete(null)}
+                                className="btn btn-secondary"
+                                style={{ padding: '10px 24px' }}
+                            >
+                                İptal
+                            </button>
+                            <button
+                                onClick={executeDelete}
+                                className="btn btn-danger"
+                                style={{ padding: '10px 24px' }}
+                            >
+                                Sil
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -19,6 +19,7 @@ const AboutEditor = lazy(() => import('./pages/admin/AboutEditor'));
 const GalleryManager = lazy(() => import('./pages/admin/GalleryManager'));
 const MediaManager = lazy(() => import('./pages/admin/MediaManager'));
 const MediaGallery = lazy(() => import('./pages/MediaGallery'));
+const Settings = lazy(() => import('./pages/admin/Settings'));
 
 function PublicLayout() {
   return (
@@ -47,6 +48,7 @@ function App() {
           <Route path="/admin/about" element={<AboutEditor />} />
           <Route path="/admin/gallery" element={<GalleryManager />} />
           <Route path="/admin/media" element={<MediaManager />} />
+          <Route path="/admin/settings" element={<Settings />} />
 
           {/* Public routes with navbar/footer */}
           <Route element={<PublicLayout />}>

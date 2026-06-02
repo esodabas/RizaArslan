@@ -9,15 +9,21 @@ export default function MediaManager() {
     const [editingId, setEditingId] = useState(null);
     const [editCaption, setEditCaption] = useState('');
     const navigate = useNavigate();
-    const token = localStorage.getItem('token');
+    const getToken = () => localStorage.getItem('token');
 
     useEffect(() => {
-        if (!token) { navigate('/admin/login'); return; }
+        if (!getToken()) { navigate('/admin/login'); return; }
         loadMedia();
-    }, [token, navigate]);
+    }, [navigate]);
 
     const loadMedia = () => {
-        axios.get('/api/media').then(res => setMedia(res.data)).catch(() => { });
+        axios.get('/api/media').then(res => setMedia(res.data)).catch(err => {
+            if (err.response?.status === 401) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('username');
+                navigate('/admin/login');
+            }
+        });
     };
 
     const handleUpload = async (e) => {
@@ -32,7 +38,7 @@ export default function MediaManager() {
                 formData.append('caption', caption);
 
                 await axios.post('/api/media', formData, {
-                    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
+                    headers: { Authorization: `Bearer ${getToken()}` }
                 });
             }
             setCaption('');
@@ -50,7 +56,7 @@ export default function MediaManager() {
 
         try {
             await axios.delete(`/api/media/${id}`, {
-                headers: { Authorization: `Bearer ${token}` }
+                headers: { Authorization: `Bearer ${getToken()}` }
             });
             setMedia(prev => prev.filter(m => m.id !== id));
         } catch {
@@ -61,7 +67,7 @@ export default function MediaManager() {
     const handleUpdateCaption = async (id) => {
         try {
             await axios.put(`/api/media/${id}`, { caption: editCaption }, {
-                headers: { Authorization: `Bearer ${token}` }
+                headers: { Authorization: `Bearer ${getToken()}` }
             });
             setMedia(prev => prev.map(m => m.id === id ? { ...m, caption: editCaption } : m));
             setEditingId(null);

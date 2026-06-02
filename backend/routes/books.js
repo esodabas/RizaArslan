@@ -29,10 +29,10 @@ router.get('/:id', async (req, res) => {
 // POST /api/books
 router.post('/', authMiddleware, async (req, res) => {
     try {
-        const { title, description, cover_image, publisher, year, isbn, buy_link } = req.body;
+        const { title, description, cover_image, file_path, publisher, year, isbn, buy_link } = req.body;
         const result = await runSql(
-            'INSERT INTO books (title, description, cover_image, publisher, year, isbn, buy_link) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [title || '', description || '', cover_image || '', publisher || '', year || null, isbn || '', buy_link || '']
+            'INSERT INTO books (title, description, cover_image, file_path, publisher, year, isbn, buy_link) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [title || '', description || '', cover_image || '', file_path || '', publisher || '', year || null, isbn || '', buy_link || '']
         );
         const book = await queryGet('SELECT * FROM books WHERE id = ?', [result.lastInsertRowid]);
         res.status(201).json(book);
@@ -45,16 +45,17 @@ router.post('/', authMiddleware, async (req, res) => {
 // PUT /api/books/:id
 router.put('/:id', authMiddleware, async (req, res) => {
     try {
-        const { title, description, cover_image, publisher, year, isbn, buy_link } = req.body;
+        const { title, description, cover_image, file_path, publisher, year, isbn, buy_link } = req.body;
         const existing = await queryGet('SELECT * FROM books WHERE id = ?', [req.params.id]);
         if (!existing) return res.status(404).json({ error: 'Kitap bulunamadı' });
 
         await runSql(
-            'UPDATE books SET title = ?, description = ?, cover_image = ?, publisher = ?, year = ?, isbn = ?, buy_link = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+            'UPDATE books SET title = ?, description = ?, cover_image = ?, file_path = ?, publisher = ?, year = ?, isbn = ?, buy_link = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
             [
                 title !== undefined ? title : existing.title,
                 description !== undefined ? description : existing.description,
                 cover_image !== undefined ? cover_image : existing.cover_image,
+                file_path !== undefined ? file_path : existing.file_path,
                 publisher !== undefined ? publisher : existing.publisher,
                 year !== undefined ? year : existing.year,
                 isbn !== undefined ? isbn : existing.isbn,

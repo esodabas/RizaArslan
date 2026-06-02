@@ -7,12 +7,12 @@ export default function GalleryManager() {
     const [uploading, setUploading] = useState(false);
     const [caption, setCaption] = useState('');
     const navigate = useNavigate();
-    const token = localStorage.getItem('token');
+    const getToken = () => localStorage.getItem('token');
 
     useEffect(() => {
-        if (!token) { navigate('/admin/login'); return; }
+        if (!getToken()) { navigate('/admin/login'); return; }
         loadGallery();
-    }, [token, navigate]);
+    }, [navigate]);
 
     const loadGallery = () => {
         axios.get('/api/upload/gallery').then(res => setImages(res.data)).catch(() => { });
@@ -30,7 +30,7 @@ export default function GalleryManager() {
 
         try {
             await axios.post('/api/upload', formData, {
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
+                headers: { Authorization: `Bearer ${getToken()}` }
             });
             setCaption('');
             loadGallery();
@@ -46,7 +46,7 @@ export default function GalleryManager() {
 
         try {
             await axios.delete(`/api/upload/gallery/${imageId}`, {
-                headers: { Authorization: `Bearer ${token}` }
+                headers: { Authorization: `Bearer ${getToken()}` }
             });
             setImages(prev => prev.filter(img => img.id !== imageId));
         } catch {
@@ -64,7 +64,7 @@ export default function GalleryManager() {
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     <Link to="/admin" style={{ color: 'var(--color-text-secondary)', textDecoration: 'none' }}>← Panel</Link>
-                    <span style={{ color: 'var(--color-text)', fontWeight: '600' }}>📸 Galeri Yönetimi</span>
+                    <span style={{ color: 'var(--color-text)', fontWeight: '600' }}>Galeri Yönetimi</span>
                 </div>
             </div>
 
@@ -96,7 +96,7 @@ export default function GalleryManager() {
                 {/* Gallery grid */}
                 {images.length === 0 ? (
                     <div className="empty-state">
-                        <div className="empty-state-icon">📸</div>
+                        <div className="empty-state-icon"></div>
                         <h3>Henüz görsel eklenmemiş</h3>
                         <p>Yukarıdan ilk görselinizi yükleyin!</p>
                     </div>
@@ -128,7 +128,7 @@ export default function GalleryManager() {
                                         onClick={() => handleDelete(image.id)}
                                         className="btn btn-sm btn-danger"
                                     >
-                                        🗑️
+                                        Sil
                                     </button>
                                 </div>
                             </div>
