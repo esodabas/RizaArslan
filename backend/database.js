@@ -5,9 +5,10 @@ let pool = null;
 let dbConfig = null;
 
 function createPool(cleanUrl, isRailway, isLocal) {
+  const isNeon = cleanUrl.includes('neon.tech');
   const p = new Pool({
     connectionString: cleanUrl,
-    ssl: isRailway ? { rejectUnauthorized: false } : (isLocal ? false : { rejectUnauthorized: false }),
+    ssl: (isRailway || isNeon) ? { rejectUnauthorized: false } : (isLocal ? false : { rejectUnauthorized: false }),
     connectionTimeoutMillis: 30000,
     idleTimeoutMillis: 600000,
     max: 10,
