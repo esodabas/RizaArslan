@@ -4,6 +4,11 @@ import axios from 'axios'
 import './index.css'
 import App from './App.jsx'
 
+// Production'da direkt Render backend'e bağlan (Netlify proxy limit'ini aşmak için)
+const API_BASE = import.meta.env.VITE_API_URL || '';
+if (API_BASE) {
+  axios.defaults.baseURL = API_BASE;
+}
 
 axios.interceptors.response.use(
   (response) => response,
