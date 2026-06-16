@@ -38,7 +38,8 @@ export function fixCloudinaryRawUrl(url, defaultExt = 'pdf') {
 
 /**
  * Dosya URL'sini tarayıcıda görüntüleme için hazırlar
- * PDF'ler için inline görüntüleme, diğerleri için indirme linki oluşturur
+ * Mobil cihazlarda Google Docs Viewer üzerinden açar (iOS/Android uyumlu)
+ * Desktop'ta doğrudan Cloudinary URL'si kullanılır
  * 
  * @param {string} url - Dosya URL'si
  * @returns {string} Düzeltilmiş URL
@@ -47,5 +48,27 @@ export function getViewableFileUrl(url) {
     if (!url) return url;
 
     // Cloudinary raw URL'lerini düzelt
+    const fixedUrl = fixCloudinaryRawUrl(url, 'pdf');
+
+    // Mobil cihaz tespiti
+    const isMobile = typeof navigator !== 'undefined' &&
+        /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    // Mobilde Cloudinary raw PDF'lerini Google Docs Viewer ile aç
+    if (isMobile && fixedUrl.includes('res.cloudinary.com') && fixedUrl.includes('/raw/upload/')) {
+        return `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(fixedUrl)}`;
+    }
+
+    return fixedUrl;
+}
+
+/**
+ * Dosya için doğrudan indirme URL'si oluşturur
+ * 
+ * @param {string} url - Dosya URL'si
+ * @returns {string} İndirme URL'si
+ */
+export function getDownloadUrl(url) {
+    if (!url) return url;
     return fixCloudinaryRawUrl(url, 'pdf');
 }

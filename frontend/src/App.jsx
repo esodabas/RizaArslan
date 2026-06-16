@@ -34,7 +34,7 @@ function PublicLayout() {
 function App() {
   return (
     <Router>
-      <Suspense fallback={<div style={{ padding: '60px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>Sayfaükleniyor...</div>}>
+      <Suspense fallback={<div style={{ padding: '60px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>Sayfa yükleniyor...</div>}>
         <Routes>
           {/* Admin routes - no navbar/footer */}
           <Route path="/admin/login" element={<Login />} />

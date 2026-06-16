@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import { getViewableFileUrl } from '../utils/cloudinaryUrl';
 
 export default function Home() {
     const [about, setAbout] = useState({});
@@ -50,7 +51,7 @@ export default function Home() {
                         </div>
                         <div className="card-grid">
                             {articles.map(article => {
-                                const destination = article.file_path ? article.file_path : `/makaleler/${article.id}`;
+                                const destination = article.file_path ? getViewableFileUrl(article.file_path) : `/makaleler/${article.id}`;
                                 const isFile = !!article.file_path;
                                 const Wrapper = isFile ? 'a' : Link;
                                 const props = isFile ? { href: destination, target: '_blank', rel: 'noreferrer' } : { to: destination };
@@ -87,7 +88,7 @@ export default function Home() {
                         </div>
                         <div className="card-grid">
                             {columns.map(col => {
-                                const destination = col.file_path ? col.file_path : `/bireysel-gorusler/${col.id}`;
+                                const destination = col.file_path ? getViewableFileUrl(col.file_path) : `/bireysel-gorusler/${col.id}`;
                                 const isFile = !!col.file_path;
                                 const Wrapper = isFile ? 'a' : Link;
                                 const props = isFile ? { href: destination, target: '_blank', rel: 'noreferrer' } : { to: destination };
@@ -121,7 +122,7 @@ export default function Home() {
                             {books.map(book => (
                                 <div className="book-card" key={book.id}>
                                     {book.file_path ? (
-                                        <a href={book.file_path} target="_blank" rel="noreferrer" style={{ display: 'block' }}>
+                                        <a href={getViewableFileUrl(book.file_path)} target="_blank" rel="noreferrer" style={{ display: 'block' }}>
                                             {book.cover_image ? (
                                                 <img src={book.cover_image} alt={book.title} className="book-cover" />
                                             ) : (
