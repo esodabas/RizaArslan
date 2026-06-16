@@ -11,12 +11,30 @@ const storage = new CloudinaryStorage({
     cloudinary,
     params: async (req, file) => {
         const isVideo = file.mimetype.startsWith('video/');
-        const isPdf = file.mimetype === 'application/pdf';
-        return {
+        const isRaw = ['application/pdf', 'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'application/zip', 'application/x-rar-compressed', 'application/vnd.rar'
+        ].includes(file.mimetype);
+
+        // Dosya uzantısını al - Cloudinary'nin doğru Content-Type ile sunması için gerekli
+        const ext = file.originalname.split('.').pop().toLowerCase();
+
+        const params = {
             folder: 'rizaarslan',
-            resource_type: isVideo ? 'video' : (isPdf ? 'raw' : 'image'),
+            resource_type: isVideo ? 'video' : (isRaw ? 'raw' : 'image'),
             allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'mp4', 'webm', 'ogg', 'mov', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip', 'rar'],
+            use_filename: true,
+            unique_filename: true,
         };
+
+        // Raw dosyalar için format belirt (uzantısız yükleme sorununu çözer)
+        if (isRaw) {
+            params.format = ext;
+        }
+
+        return params;
     },
 });
 

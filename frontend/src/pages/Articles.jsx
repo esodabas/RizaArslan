@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import { getViewableFileUrl } from '../utils/cloudinaryUrl';
 
 export default function Articles() {
     const [articles, setArticles] = useState([]);
@@ -36,10 +37,11 @@ export default function Articles() {
                 ) : (
                     <div className="card-grid">
                         {articles.map(article => {
-                            const hasFile = !!article.file_path;
+                            const fileUrl = getViewableFileUrl(article.file_path);
+                            const hasFile = !!fileUrl;
                             const Wrapper = hasFile ? 'a' : Link;
                             const wrapperProps = hasFile
-                                ? { href: article.file_path, target: '_blank', rel: 'noreferrer', style: { textDecoration: 'none' } }
+                                ? { href: fileUrl, target: '_blank', rel: 'noreferrer', style: { textDecoration: 'none' } }
                                 : { to: `/makaleler/${article.id}`, style: { textDecoration: 'none' } };
 
                             return (

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { getViewableFileUrl } from '../utils/cloudinaryUrl';
 
 export default function Books() {
     const [books, setBooks] = useState([]);
@@ -33,7 +34,7 @@ export default function Books() {
                             <div className="book-card" key={book.id}>
                                 {/* Kapak Görseli - file_path varsa tıklanınca dosya açılır */}
                                 {book.file_path ? (
-                                    <a href={book.file_path} target="_blank" rel="noopener noreferrer" style={{ display: 'block', flexShrink: 0 }}>
+                                    <a href={getViewableFileUrl(book.file_path)} target="_blank" rel="noopener noreferrer" style={{ display: 'block', flexShrink: 0 }}>
                                         {book.cover_image ? (
                                             <img src={book.cover_image} alt={book.title} className="book-cover" style={{ cursor: 'pointer' }} />
                                         ) : (
@@ -51,7 +52,7 @@ export default function Books() {
                                 <div className="book-info">
                                     <h3>
                                         {book.file_path ? (
-                                            <a href={book.file_path} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>
+                                            <a href={getViewableFileUrl(book.file_path)} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>
                                                 {book.title}
                                             </a>
                                         ) : book.title}
@@ -66,7 +67,7 @@ export default function Books() {
                                     )}
                                     <div style={{ display: 'flex', gap: '12px', marginTop: '14px', flexWrap: 'wrap' }}>
                                         {book.file_path && (
-                                            <a href={book.file_path} target="_blank" rel="noopener noreferrer" className="book-link">
+                                            <a href={getViewableFileUrl(book.file_path)} target="_blank" rel="noopener noreferrer" className="book-link">
                                                 Kitabı Oku / İndir
                                             </a>
                                         )}
