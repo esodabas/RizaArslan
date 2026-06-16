@@ -1,27 +1,22 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const cloudinary = require('../cloudinary');
 const { queryAll, queryGet, runSql } = require('../database');
 const { authMiddleware } = require('../middleware/auth');
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '..', 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Configure multer
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadsDir);
+// Cloudinary storage for multer
+const storage = new CloudinaryStorage({
+    cloudinary,
+    params: async (req, file) => {
+        const isVideo = file.mimetype.startsWith('video/');
+        return {
+            folder: 'rizaarslan/media',
+            resource_type: isVideo ? 'video' : 'image',
+            allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'mp4', 'webm', 'ogg', 'mov'],
+        };
     },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const ext = path.extname(file.originalname);
-        cb(null, 'media-' + uniqueSuffix + ext);
-    }
 });
 
 const fileFilter = (req, file, cb) => {
@@ -42,7 +37,7 @@ const upload = multer({
     limits: { fileSize: 50 * 1024 * 1024 } // 50MB
 });
 
-// GET /api/media - get all media items
+// GET /api/media
 router.get('/', async (req, res) => {
     try {
         const media = await queryAll('SELECT * FROM media_table ORDER BY sort_order ASC, created_at DESC');
@@ -53,7 +48,7 @@ router.get('/', async (req, res) => {
     }
 });
 
-// POST /api/media - upload new media
+// POST /api/media
 router.post('/', authMiddleware, (req, res) => {
     upload.single('file')(req, res, async (multerErr) => {
         try {
@@ -69,7 +64,8 @@ router.post('/', authMiddleware, (req, res) => {
                 return res.status(400).json({ error: 'Dosya yüklenmedi' });
             }
 
-            const fileUrl = `/uploads/${req.file.filename}`;
+            // Cloudinary URL'i direkt kullan
+            const fileUrl = req.file.path;
             const isVideo = req.file.mimetype.startsWith('video/');
             const mediaType = isVideo ? 'video' : 'image';
             const caption = req.body.caption || '';
@@ -91,7 +87,7 @@ router.post('/', authMiddleware, (req, res) => {
     });
 });
 
-// PUT /api/media/:id - update caption
+// PUT /api/media/:id
 router.put('/:id', authMiddleware, async (req, res) => {
     try {
         const existing = await queryGet('SELECT * FROM media_table WHERE id = ?', [req.params.id]);
@@ -114,14 +110,14 @@ router.delete('/:id', authMiddleware, async (req, res) => {
         const existing = await queryGet('SELECT * FROM media_table WHERE id = ?', [req.params.id]);
         if (!existing) return res.status(404).json({ error: 'Medya bulunamadı' });
 
-        // Delete file from disk
-        const filePath = path.join(__dirname, '..', existing.file_path);
+        // Cloudinary'den sil
         try {
-            if (fs.existsSync(filePath)) {
-                fs.unlinkSync(filePath);
-            }
-        } catch (fileErr) {
-            console.warn('Medya dosyası diskten silinemedi (kullanımda olabilir):', fileErr.message);
+            const urlParts = existing.file_path.split('/');
+            const publicId = 'rizaarslan/media/' + urlParts[urlParts.length - 1].split('.')[0];
+            const resourceType = existing.media_type === 'video' ? 'video' : 'image';
+            await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
+        } catch (cloudErr) {
+            console.warn('Cloudinary silme hatası:', cloudErr.message);
         }
 
         await runSql('DELETE FROM media_table WHERE id = ?', [req.params.id]);

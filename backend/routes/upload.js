@@ -1,27 +1,23 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const cloudinary = require('../cloudinary');
 const { queryAll, queryGet, runSql } = require('../database');
 const { authMiddleware } = require('../middleware/auth');
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '..', 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Configure multer
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadsDir);
+// Cloudinary storage for multer
+const storage = new CloudinaryStorage({
+    cloudinary,
+    params: async (req, file) => {
+        const isVideo = file.mimetype.startsWith('video/');
+        const isPdf = file.mimetype === 'application/pdf';
+        return {
+            folder: 'rizaarslan',
+            resource_type: isVideo ? 'video' : (isPdf ? 'raw' : 'image'),
+            allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'mp4', 'webm', 'ogg', 'mov', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip', 'rar'],
+        };
     },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const ext = path.extname(file.originalname);
-        cb(null, uniqueSuffix + ext);
-    }
 });
 
 const fileFilter = (req, file, cb) => {
@@ -44,7 +40,7 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
     storage,
     fileFilter,
-    limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit for videos
+    limits: { fileSize: 50 * 1024 * 1024 } // 50MB
 });
 
 // POST /api/upload
@@ -63,7 +59,8 @@ router.post('/', authMiddleware, (req, res) => {
                 return res.status(400).json({ error: 'Dosya yüklenmedi' });
             }
 
-            const imageUrl = `/uploads/${req.file.filename}`;
+            // Cloudinary URL'i direkt olarak kullan
+            const imageUrl = req.file.path;
 
             if (req.body.gallery === 'true') {
                 const maxOrder = await queryGet('SELECT MAX(sort_order) as max_order FROM gallery');
@@ -96,13 +93,12 @@ router.delete('/gallery/:id', authMiddleware, async (req, res) => {
         const image = await queryGet('SELECT * FROM gallery WHERE id = ?', [req.params.id]);
         if (!image) return res.status(404).json({ error: 'Görsel bulunamadı' });
 
-        const filePath = path.join(__dirname, '..', image.image_path);
+        // Cloudinary'den sil
         try {
-            if (fs.existsSync(filePath)) {
-                fs.unlinkSync(filePath);
-            }
-        } catch (fileErr) {
-            console.warn('Görsel diskten silinemedi (kullanımda olabilir):', fileErr.message);
+            const publicId = image.image_path.split('/').pop().split('.')[0];
+            await cloudinary.uploader.destroy(`rizaarslan/${publicId}`);
+        } catch (cloudErr) {
+            console.warn('Cloudinary silme hatası:', cloudErr.message);
         }
 
         await runSql('DELETE FROM gallery WHERE id = ?', [req.params.id]);
