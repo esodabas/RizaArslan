@@ -89,7 +89,7 @@ export default function Editor({ type }) {
     }, [itemId, apiPath, navigate]);
 
     // Auto-save with debounce (3 seconds)
-    const triggerAutoSave = useCallback((newTitle, newContent, newSummary, newCoverImage) => {
+    const triggerAutoSave = useCallback((newTitle, newContent, newSummary, newCoverImage, newFilePath) => {
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
 
         saveTimerRef.current = setTimeout(() => {
@@ -98,7 +98,7 @@ export default function Editor({ type }) {
                 content: newContent,
                 summary: newSummary,
                 cover_image: newCoverImage,
-                file_path: filePath,
+                file_path: newFilePath !== undefined ? newFilePath : filePath,
                 status: 'draft'
             };
             if (type === 'column') data.media = JSON.stringify(mediaItems);
@@ -251,9 +251,37 @@ export default function Editor({ type }) {
                 headers: { Authorization: `Bearer ${getToken()}` }
             });
 
-            setFilePath(res.data.url);
-            triggerAutoSave(title, content, summary, coverImage);
-            alert('Dosya başarıyla yüklendi.');
+            const uploadedUrl = res.data.url;
+            setFilePath(uploadedUrl);
+
+            // Direkt kayıt yap - React state güncellemesi asenkron olduğu için
+            // uploadedUrl'yi hem state'e hem saveData'ya aynı anda gönderiyoruz
+            const token = getToken();
+            if (token) {
+                const savePayload = {
+                    title,
+                    content,
+                    summary,
+                    cover_image: coverImage,
+                    file_path: uploadedUrl,
+                    status
+                };
+                if (type === 'column') savePayload.media = JSON.stringify(mediaItems);
+                try {
+                    if (itemId) {
+                        await axios.put(`/api/${apiPath}/${itemId}`, savePayload, { headers: { Authorization: `Bearer ${token}` } });
+                    } else {
+                        const saveRes = await axios.post(`/api/${apiPath}`, savePayload, { headers: { Authorization: `Bearer ${token}` } });
+                        setItemId(saveRes.data.id);
+                        window.history.replaceState(null, '', `/admin/${apiPath}/edit/${saveRes.data.id}`);
+                    }
+                    alert('Dosya başarıyla yüklendi ve kaydedildi.');
+                } catch (saveErr) {
+                    alert('Dosya yüklendi ancak kayıt sırasında hata oluştu. Lütfen manuel olarak kaydedin.');
+                }
+            } else {
+                alert('Dosya yüklendi. Lütfen kaydet butonuna basın.');
+            }
         } catch (err) {
             const msg = err.response?.data?.error || err.message || 'Bilinmeyen hata';
             alert(`Dosya yükleme hatası (${err.response?.status || '?'}): ${msg}`);
